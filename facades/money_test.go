@@ -16,7 +16,7 @@ func TestMoneyPanicsWithoutTheServiceProvider(t *testing.T) {
 }
 
 func TestMoneyResolvesTheBoundManager(t *testing.T) {
-	manager, err := money.NewManager("MMK")
+	manager, err := money.NewManager(money.Config{DefaultCurrency: "MMK"})
 	require.NoError(t, err)
 
 	app := mocksfoundation.NewApplication(t)

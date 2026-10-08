@@ -4,7 +4,7 @@
 [![Tests](https://img.shields.io/github/actions/workflow/status/laranex/goravel-money/tests.yml?label=tests&style=flat-square)](https://github.com/laranex/goravel-money/actions/workflows/tests.yml)
 [![License](https://img.shields.io/github/license/laranex/goravel-money.svg?style=flat-square)](LICENSE.md)
 
-Money for [Goravel](https://www.goravel.dev) applications, the Go counterpart of `laranex/laravel-money`: ISO 4217 currencies, an immutable `Money` value stored as integer minor units, exact decimal parsing and formatting, and `money.Column` fields for Goravel's ORM. Built for humans and AI agents.
+Exact money for [Goravel](https://www.goravel.dev) applications, the Go counterpart of `laranex/laravel-money`: an immutable `Money` of any size in integer minor units, strict parsing, arithmetic with eight rounding modes, percentages, allocation without losing a cent, locale-aware formatting without floats, and ORM column types. Built for humans and AI agents.
 
 ## Documentation
 

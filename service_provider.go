@@ -2,9 +2,11 @@ package money
 
 import (
 	"fmt"
+	"reflect"
 	"sync/atomic"
 
 	"github.com/goravel/framework/contracts/binding"
+	contractsconfig "github.com/goravel/framework/contracts/config"
 	"github.com/goravel/framework/contracts/foundation"
 )
 
@@ -31,9 +33,9 @@ func (r *ServiceProvider) Relationship() binding.Relationship {
 	}
 }
 
-// Register binds the *Manager as a singleton. Its default currency is the
-// money.default_currency config value, falling back to the MONEY_CURRENCY
-// environment variable and then to USD when the config file is not published.
+// Register binds the *Manager as a singleton, configured from config/money.go
+// (see ConfigFrom). Without the published file it uses MONEY_CURRENCY and
+// laravel-money's defaults.
 func (r *ServiceProvider) Register(app foundation.Application) {
 	registeredApp.Store(&appHolder{app: app})
 
@@ -42,10 +44,82 @@ func (r *ServiceProvider) Register(app foundation.Application) {
 		if config == nil {
 			return nil, fmt.Errorf("goravel-money: the config facade is not registered")
 		}
-		code := config.GetString("money.default_currency", config.EnvString("MONEY_CURRENCY", FallbackCurrency))
+		cfg, err := ConfigFrom(config)
+		if err != nil {
+			return nil, err
+		}
 
-		return NewManager(code)
+		return NewManager(cfg)
 	})
+}
+
+// ConfigFrom reads the money.* config values: default_currency (else the
+// MONEY_CURRENCY env, else USD), rounding, currencies, locale (else
+// app.locale) and serialization.
+func ConfigFrom(config contractsconfig.Config) (Config, error) {
+	cfg := DefaultConfig()
+	cfg.DefaultCurrency = config.GetString("money.default_currency", config.EnvString("MONEY_CURRENCY", FallbackCurrency))
+
+	switch rounding := config.Get("money.rounding", HalfUp.String()).(type) {
+	case Rounding:
+		cfg.Rounding = rounding
+	case string:
+		mode, err := ParseRounding(rounding)
+		if err != nil {
+			return Config{}, err
+		}
+		cfg.Rounding = mode
+	case nil:
+	default:
+		return Config{}, invalidConfig("rounding", "a rounding mode name such as \"half_up\"")
+	}
+
+	currencies, err := customCurrencies(config.Get("money.currencies", nil))
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Currencies = currencies
+
+	cfg.Locale = config.GetString("money.locale", "")
+	if cfg.Locale == "" {
+		cfg.Locale = config.GetString("app.locale", "")
+	}
+
+	amount, _ := config.Get("money.serialization.amount", string(AmountMinor)).(string)
+	cfg.Serialization = Serialization{
+		Amount:           AmountFormat(amount),
+		IncludeDecimal:   config.GetBool("money.serialization.include_decimal", true),
+		IncludeFormatted: config.GetBool("money.serialization.include_formatted", true),
+	}
+
+	return cfg, nil
+}
+
+// customCurrencies reads money.currencies, a map of codes to integer decimal places.
+func customCurrencies(value any) (map[string]int, error) {
+	invalid := invalidConfig("currencies", `a map of currency codes to non-negative integer decimal places, e.g. "PTS": 0`)
+	if value == nil {
+		return nil, nil
+	}
+	rv := reflect.ValueOf(value)
+	if rv.Kind() != reflect.Map || rv.Type().Key().Kind() != reflect.String {
+		return nil, invalid
+	}
+	out := make(map[string]int, rv.Len())
+	iter := rv.MapRange()
+	for iter.Next() {
+		v := reflect.ValueOf(iter.Value().Interface())
+		switch v.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			out[iter.Key().String()] = int(v.Int())
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			out[iter.Key().String()] = int(v.Uint())
+		default:
+			return nil, invalid
+		}
+	}
+
+	return out, nil
 }
 
 // Boot registers config/money.go for `./artisan vendor:publish`
@@ -79,18 +153,4 @@ func Registered() (*Manager, error) {
 	}
 
 	return Resolve(holder.app)
-}
-
-// defaultCurrency is the currency of Column[Default]: the registered
-// application's default currency, or FallbackCurrency outside a Goravel app.
-func defaultCurrency() (Currency, error) {
-	if registeredApp.Load() == nil {
-		return LookupCurrency(FallbackCurrency)
-	}
-	manager, err := Registered()
-	if err != nil {
-		return Currency{}, err
-	}
-
-	return manager.DefaultCurrency(), nil
 }
