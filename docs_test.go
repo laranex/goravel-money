@@ -116,4 +116,25 @@ func TestDocumentationExamples(t *testing.T) {
 	assert.Equal(t, "¥1,500", of(t, "1500", "JPY").Format("en"))
 	assert.Equal(t, "₹12,34,567.89", of(t, "1234567.89", "INR").Format("en_IN"))
 	assert.Equal(t, "USD 1234.50", price.String())
+
+	usd := MustCurrency("USD")
+	assert.Equal(t, []string{"70.00", "20.00", "10.00"}, decimals(must2(t)(MustOf("100.00", usd).Allocate(70, 20, 10))))
+	assert.Equal(t, []string{"0.03", "0.03", "0.04"}, decimals(must2(t)(MustOf("0.10", usd).Allocate("0.3", "0.3", "0.4"))))
+	shares, err := AllocateMap(MustOf("100.00", usd), map[string]int{"owner": 70, "agent": 20, "platform": 10})
+	require.NoError(t, err)
+	assert.Equal(t, "70.00", shares["owner"].Decimal())
+	assert.Equal(t, "EUR 5.00", New(500, MustCurrency("EUR")).String())
+	assert.Equal(t, "JPY 1234", MustOf(1234, MustCurrency("JPY")).String())
+	assert.Equal(t, "-1.00", must(t)(MustOf("-10.00", usd).Mod("3")).Decimal())
+}
+
+func must2(t *testing.T) func([]Money, error) []Money {
+	t.Helper()
+
+	return func(m []Money, err error) []Money {
+		t.Helper()
+		require.NoError(t, err)
+
+		return m
+	}
 }

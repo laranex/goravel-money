@@ -67,7 +67,7 @@ func (e *ParseError) Error() string {
 			plural = ""
 		}
 
-		return fmt.Sprintf("money: %s allows %d decimal place%s, but %q has %d; pass a rounding mode to round it, e.g. money.Parse(%q, currency, money.HalfUp)",
+		return fmt.Sprintf("money: %s allows %d decimal place%s, but %q has %d; pass a rounding mode to round it, e.g. money.Of(%q, currency, money.HalfUp)",
 			e.Currency, e.Precision, plural, e.Input, e.Decimals, e.Input)
 	}
 
