@@ -116,7 +116,7 @@ func TestIntegerColumnsBeyondInt64(t *testing.T) {
 	require.NoError(t, db.Create(&created).Error)
 	var got ledger
 	require.NoError(t, db.First(&got, created.ID).Error)
-	assert.True(t, huge.Equals(got.Total.Money))
+	assert.True(t, equal(t, huge, got.Total.Money))
 
 	lossy := product{Price: NewColumn[Default](huge)}
 	require.NoError(t, db.Create(&lossy).Error)

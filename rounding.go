@@ -88,10 +88,21 @@ func (r *Rounding) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// pick returns the first given rounding, or the configured default.
+// validate returns ErrInvalidOperand for a value that is not one of the
+// eight modes, such as Rounding(42), instead of silently rounding half up.
+func (r Rounding) validate() error {
+	if r < HalfUp || r > Floor {
+		return newError(ErrInvalidOperand, "%s is not a rounding mode; use one of money.Roundings()", r)
+	}
+
+	return nil
+}
+
+// pick returns the first given rounding, or the configured default. A given
+// rounding that is not a valid mode returns ErrInvalidOperand.
 func pick(rounding []Rounding) (Rounding, error) {
 	if len(rounding) > 0 {
-		return rounding[0], nil
+		return rounding[0], rounding[0].validate()
 	}
 	manager, err := current()
 	if err != nil {

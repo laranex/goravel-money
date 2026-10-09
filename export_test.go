@@ -85,3 +85,12 @@ func amounts(monies []Money) []string {
 
 	return out
 }
+
+// equal reports whether m equals other, failing the test on an error.
+func equal(t testing.TB, m Money, other any) bool {
+	t.Helper()
+	ok, err := m.Equals(other)
+	require.NoError(t, err)
+
+	return ok
+}

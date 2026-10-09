@@ -36,17 +36,45 @@ func FromBigInt(minor *big.Int, currency Currency) Money {
 	return Money{amount: minor.String(), currency: currency}
 }
 
-// OfMinor returns Money for an amount in minor units given as an integer
-// string of any size: OfMinor("123450", usd) is 1,234.50 USD. Anything but an
-// optional sign and digits returns ErrInvalidOperand.
-func OfMinor(minor string, currency Currency) (Money, error) {
-	trimmed := strings.TrimSpace(minor)
+// OfMinor returns Money for an amount in minor units: OfMinor(123450, usd)
+// and OfMinor("123450", usd) are 1,234.50 USD. The amount is an integer, an
+// integer string of any size or a *big.Int. Floats and anything but an
+// optional sign and digits return ErrInvalidOperand.
+func OfMinor(minor any, currency Currency) (Money, error) {
+	text, err := numberString(minor)
+	if err != nil {
+		return Money{}, err
+	}
+	trimmed := strings.TrimSpace(text)
 	digits := strings.TrimLeft(trimmed, "+-")
 	if len(trimmed)-len(digits) > 1 || !isDigits(digits) {
-		return Money{}, newError(ErrInvalidOperand, "minor-unit amounts must be integers such as 1050 or \"1050\", %q given; use money.Parse for decimal amounts", minor)
+		return Money{}, newError(ErrInvalidOperand, "minor-unit amounts must be integers such as 1050 or \"1050\", %q given; use money.Of for decimal amounts", text)
 	}
 
 	return FromBigInt(mustBig(trimmed), currency), nil
+}
+
+// Of returns Money for a decimal amount in the given currency: a string
+// such as "1234.50", "1,234.50" or "-0.5", an integer (1234 means 1234.00) or
+// a *big.Int. It is the counterpart of laravel-money's Money::of(). Floats
+// return ErrInvalidOperand; strings are parsed like Parse.
+func Of(amount any, currency Currency, rounding ...Rounding) (Money, error) {
+	text, err := numberString(amount)
+	if err != nil {
+		return Money{}, err
+	}
+
+	return Parse(text, currency, rounding...)
+}
+
+// MustOf is like Of but panics on an error. Use it for constants.
+func MustOf(amount any, currency Currency, rounding ...Rounding) Money {
+	m, err := Of(amount, currency, rounding...)
+	if err != nil {
+		panic(err)
+	}
+
+	return m
 }
 
 // Parse returns Money for a decimal amount such as "1234.50", "1,234.50",
@@ -60,6 +88,9 @@ func OfMinor(minor string, currency Currency) (Money, error) {
 func Parse(amount string, currency Currency, rounding ...Rounding) (Money, error) {
 	var mode *Rounding
 	if len(rounding) > 0 {
+		if err := rounding[0].validate(); err != nil {
+			return Money{}, err
+		}
 		mode = &rounding[0]
 	}
 	minor, err := toMinor(amount, currency.minorUnits, mode, currency.code)
@@ -140,7 +171,8 @@ func (m Money) IsPositive() bool { return m.Sign() > 0 }
 // IsNegative reports whether the amount is less than zero.
 func (m Money) IsNegative() bool { return m.Sign() < 0 }
 
-// IsSameCurrency reports whether every given amount has m's currency.
+// IsSameCurrency reports whether every given amount has m's currency: the
+// same code and the same precision.
 func (m Money) IsSameCurrency(others ...Money) bool {
 	for _, other := range others {
 		if !m.currency.Equals(other.currency) {
@@ -152,14 +184,15 @@ func (m Money) IsSameCurrency(others ...Money) bool {
 }
 
 // Equals reports whether other has the same currency and amount. Different
-// currencies, and operands that are not valid amounts, are never equal.
-func (m Money) Equals(other any) bool {
+// currencies are never equal. An operand that is not a valid amount, such as
+// a float or "abc", returns an error, like every other comparison.
+func (m Money) Equals(other any) (bool, error) {
 	o, err := m.operand(other)
 	if err != nil {
-		return false
+		return false, err
 	}
 
-	return m.IsSameCurrency(o) && m.big().Cmp(o.big()) == 0
+	return m.IsSameCurrency(o) && m.big().Cmp(o.big()) == 0, nil
 }
 
 // Compare returns -1, 0 or +1 as m is less than, equal to or greater than

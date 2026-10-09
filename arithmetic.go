@@ -92,10 +92,16 @@ const MaxScale = 100
 // RoundTo rounds to fewer decimals than the currency has and keeps
 // minor-unit storage: 12.34 USD RoundTo(0) is 12.00, 15 JPY RoundTo(-1) is
 // 20. Decimals at or above the currency's precision return m unchanged.
-// Decimals outside -MaxScale..MaxScale return ErrInvalidOperand.
+// Decimals outside -MaxScale..MaxScale, and a rounding that is not a valid
+// mode, return ErrInvalidOperand.
 func (m Money) RoundTo(decimals int, rounding ...Rounding) (Money, error) {
 	if decimals < -MaxScale || decimals > MaxScale {
 		return Money{}, newError(ErrInvalidOperand, "the decimals must be between -%d and %d, %d given", MaxScale, MaxScale, decimals)
+	}
+	if len(rounding) > 0 {
+		if err := rounding[0].validate(); err != nil {
+			return Money{}, err
+		}
 	}
 	if decimals >= m.currency.minorUnits {
 		return m, nil

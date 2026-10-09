@@ -76,7 +76,7 @@ func FuzzAllocateKeepsEveryMinorUnit(f *testing.F) {
 		require.NoError(t, err)
 		total, err := Sum(shares)
 		require.NoError(t, err)
-		assert.True(t, m.Equals(total))
+		assert.True(t, equal(t, m, total))
 
 		ratios := []uint16{a, b, c}
 		sum := new(big.Int)

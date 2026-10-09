@@ -134,6 +134,19 @@ func (m *Manager) Precision(code string) (int, error) {
 	return c.minorUnits, err
 }
 
+// Of returns Money for a decimal amount in the given currency (empty code:
+// the default currency): a string such as "1,234.50", an integer (1234 means
+// 1234.00) or a *big.Int. It is the counterpart of laravel-money's
+// Money::of() and LaravelMoney::of(); see the package-level Of.
+func (m *Manager) Of(amount any, code string, rounding ...Rounding) (Money, error) {
+	c, err := m.Currency(code)
+	if err != nil {
+		return Money{}, err
+	}
+
+	return Of(amount, c, rounding...)
+}
+
 // Parse returns Money for a decimal amount such as "1,234.50" in the given
 // currency (empty code: the default currency). See the package-level Parse
 // for the strict parsing rules.
@@ -157,9 +170,10 @@ func (m *Manager) Make(minor int64, code string) (Money, error) {
 	return New(minor, c), nil
 }
 
-// OfMinor returns Money for an amount in minor units given as an integer
-// string of any size, such as "123450".
-func (m *Manager) OfMinor(minor, code string) (Money, error) {
+// OfMinor returns Money for an amount in minor units (empty code: the
+// default currency): an integer, an integer string of any size such as
+// "123450", or a *big.Int.
+func (m *Manager) OfMinor(minor any, code string) (Money, error) {
 	c, err := m.Currency(code)
 	if err != nil {
 		return Money{}, err
