@@ -68,7 +68,7 @@ func TestJSONRoundTrip(t *testing.T) {
 		t.Run(m.String(), func(t *testing.T) {
 			var decoded Money
 			require.NoError(t, json.Unmarshal([]byte(marshal(t, m)), &decoded))
-			assert.True(t, m.Equals(decoded))
+			assert.True(t, equal(t, m, decoded))
 			assert.Equal(t, m, decoded)
 		})
 	}

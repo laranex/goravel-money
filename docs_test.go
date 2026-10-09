@@ -38,7 +38,7 @@ func TestIntroductionExample(t *testing.T) {
 	assert.Equal(t, []string{"33.34", "33.33", "33.33"}, decimals(parts))
 	assert.Equal(t, "12.50", percentage)
 	assert.Equal(t, "1650", yen.Decimal())
-	assert.True(t, of(t, "1234.50", "USD").Equals(subtotal))
+	assert.True(t, equal(t, of(t, "1234.50", "USD"), subtotal))
 
 	db := openDB(t)
 	require.NoError(t, db.AutoMigrate(&order{}))

@@ -79,7 +79,37 @@ func TestSkillOnlyUsesExistingAPI(t *testing.T) {
 	}
 
 	assert.True(t, strings.HasPrefix(text, "---\nname: goravel-money\n"))
-	for _, heading := range []string{"## When to use", "## Install", "## Configure", "## Use", "## Test your app", "## Avoid"} {
-		assert.Contains(t, text, heading)
+}
+
+// TestSkillHasTheSharedStructure checks the skill's headings, which
+// laravel-money's skill shares in the same order.
+func TestSkillHasTheSharedStructure(t *testing.T) {
+	skill, err := os.ReadFile("skills/goravel-money/SKILL.md")
+	require.NoError(t, err)
+
+	var headings []string
+	inCode := false
+	for _, line := range strings.Split(strings.ReplaceAll(string(skill), "\r\n", "\n"), "\n") {
+		if strings.HasPrefix(line, "```") {
+			inCode = !inCode
+		}
+		if !inCode && strings.HasPrefix(line, "#") {
+			headings = append(headings, line)
+		}
 	}
+
+	assert.Equal(t, []string{
+		"# Goravel Money",
+		"## When to use",
+		"## Install",
+		"## Configure",
+		"## Use",
+		"### Build money",
+		"### Calculate",
+		"### Format and serialize",
+		"### Store in the database",
+		"### Handle errors",
+		"## Test your app",
+		"## Avoid",
+	}, headings)
 }

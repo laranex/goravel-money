@@ -251,7 +251,7 @@ func TestOfMinor(t *testing.T) {
 		assert.ErrorIs(t, err, ErrInvalidOperand, input)
 	}
 	_, err := OfMinor("10.50", MustCurrency("USD"))
-	assert.EqualError(t, err, `money: minor-unit amounts must be integers such as 1050 or "1050", "10.50" given; use money.Parse for decimal amounts`)
+	assert.EqualError(t, err, `money: minor-unit amounts must be integers such as 1050 or "1050", "10.50" given; use money.Of for decimal amounts`)
 }
 
 func TestNewAndFromBigInt(t *testing.T) {
@@ -322,13 +322,20 @@ func TestSign(t *testing.T) {
 func TestCompare(t *testing.T) {
 	ten := of(t, "10", "")
 
-	assert.True(t, ten.Equals(of(t, "10.00", "")))
-	assert.True(t, ten.Equals("10"))
-	assert.True(t, ten.Equals(1000-990))
-	assert.True(t, ten.Equals(&ten))
-	assert.False(t, ten.Equals(of(t, "10", "EUR")))
-	assert.False(t, ten.Equals("abc"))
-	assert.False(t, ten.Equals(10.0))
+	assert.True(t, equal(t, ten, of(t, "10.00", "")))
+	assert.True(t, equal(t, ten, "10"))
+	assert.True(t, equal(t, ten, 1000-990))
+	assert.True(t, equal(t, ten, &ten))
+	assert.False(t, equal(t, ten, of(t, "10", "EUR")), "different currencies are never equal")
+	assert.False(t, equal(t, ten, "10.01"))
+
+	// Invalid operands are errors, as in laravel-money's equals().
+	_, err := ten.Equals("abc")
+	assert.ErrorIs(t, err, ErrInvalidDecimal)
+	_, err = ten.Equals(10.0)
+	assert.ErrorIs(t, err, ErrInvalidOperand)
+	_, err = ten.Equals("10.001")
+	assert.ErrorIs(t, err, ErrTooManyDecimals)
 	assert.True(t, ten == of(t, "10.00", ""), "Money is comparable")
 
 	tests := []struct {
