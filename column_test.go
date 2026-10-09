@@ -276,6 +276,20 @@ func TestAmountColumnMoney(t *testing.T) {
 
 	_, _, err = balance.Money("XYZ")
 	assert.ErrorIs(t, err, ErrUnknownCurrency)
+
+	// A valid column built by hand, without Set or Scan, holds zero.
+	handmade := AmountColumn{Valid: true}
+	m, ok, err = handmade.Money("USD")
+	require.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, "USD 0.00", m.String())
+	assert.Equal(t, "0", handmade.Amount())
+	data, err := json.Marshal(handmade)
+	require.NoError(t, err)
+	assert.Equal(t, `"0"`, string(data))
+	value, err := handmade.Value()
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), value)
 }
 
 func TestAmountColumnScanAndValue(t *testing.T) {
