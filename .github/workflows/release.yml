@@ -1,6 +1,6 @@
 name: release
 
-# Pushing a version tag (v4.0.0, v4.0.0-dev.1, ...) releases the module: the
+# Pushing a version tag (v4.0.0, v4.0.0-alpha.1, ...) releases the module: the
 # test suite runs, the GitHub release is created from the matching CHANGELOG.md
 # section, and the Go module proxy is asked for the new version so pkg.go.dev
 # lists it.

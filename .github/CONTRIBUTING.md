@@ -14,7 +14,7 @@ For significant changes, please open an issue first so we can discuss the approa
 ## Guidelines
 
 - Ensure the code is formatted with `gofmt` and passes `go vet ./...`.
-- Amounts are integer minor units (`int64`); never introduce a `float64` into an amount path.
+- Amounts are exact integer minor units of any size (`math/big`); never introduce a `float64` into an amount path.
 - Currency data and minor units follow ISO 4217; parsing and formatting stay in line with `laranex/laravel-money` (moneyphp), so add the same test vector to both packages when behavior changes.
 - Send a coherent commit history, making sure each commit in your pull request is meaningful.
 - You may need to [rebase](https://git-scm.com/book/en/v2/Git-Branching-Rebasing) to avoid merge conflicts.
