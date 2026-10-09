@@ -16,3 +16,10 @@ updates:
       interval: "weekly"
     labels:
       - "dependencies"
+    ignore:
+      # Test-only SQLite driver. Newer releases require Go 1.26, and a module's go
+      # line applies to every app that installs it; revisit when Go 1.25 is dropped.
+      - dependency-name: "github.com/ncruces/go-sqlite3"
+        versions: [">= 0.26.0"]
+      - dependency-name: "github.com/ncruces/go-sqlite3/gormlite"
+        versions: [">= 0.25.0"]
