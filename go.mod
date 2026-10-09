@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/goravel/framework v1.18.0
-	github.com/ncruces/go-sqlite3 v0.25.0
+	github.com/ncruces/go-sqlite3 v0.25.2
 	github.com/ncruces/go-sqlite3/gormlite v0.24.0
 	github.com/stretchr/testify v1.12.1
 	gorm.io/gorm v1.31.2
