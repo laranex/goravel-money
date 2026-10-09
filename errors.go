@@ -71,7 +71,7 @@ func (e *ParseError) Error() string {
 			e.Currency, e.Precision, plural, e.Input, e.Decimals, e.Input)
 	}
 
-	return fmt.Sprintf(`money: cannot parse %q as an amount; use digits with a dot as the decimal separator, e.g. "1234.50"; commas or spaces may only group thousands ("1,234.50")`, e.Input)
+	return fmt.Sprintf(`money: cannot parse %q as an amount; use digits with a dot as the decimal separator, e.g. "1234.50"; commas or spaces may only group thousands, one separator used consistently ("1,234,567.50" or "12,34,567.50")`, e.Input)
 }
 
 // Unwrap returns the reason.

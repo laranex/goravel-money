@@ -49,7 +49,7 @@ big, err := manager.OfMinor("99999999999999999999", "USD")     // minor units of
 rounded, err := manager.Parse("1.235", "USD", money.HalfUp)    // 1.24
 ```
 
-- Parsing is strict: `"12,50"`, `".5"`, `"1e3"` return `money.ErrInvalidDecimal`; `"1.234"` USD returns `money.ErrTooManyDecimals` unless a rounding mode is passed. `"12.500"` is fine.
+- Parsing is strict: `"12,50"`, `".5"`, `"1e3"`, mixed separators (`"1 234,567"`) and irregular groups (`"1,234,56,789"`) return `money.ErrInvalidDecimal`; grouping needs one separator throughout, in Western groups of three (`"1,234,567"`) or Indian grouping (`"12,34,567"`); `"1.234"` USD returns `money.ErrTooManyDecimals` unless a rounding mode is passed. `"12.500"` is fine.
 - Without the container: `money.Parse(amount, money.MustCurrency("USD"))`, `money.MustParse`, `money.New(minor, currency)`, `money.Zero(currency)`.
 - Read with `Amount()` (minor units string), `Decimal()` (`"1234.50"`), `Int64()`, `Currency().Code()`, `Precision()`, `IsZero()`, `IsPositive()`, `IsNegative()`.
 
@@ -66,11 +66,12 @@ pct, err := part.PercentageOf(total, 2)               // "12.50"
 parts, err := price.Split(3)                          // 33.34, 33.33, 33.33
 shares, err := money.AllocateMap(price, map[string]int{"owner": 70, "agent": 30})
 sum, err := money.Sum(prices)                         // also Min, Max, Avg
-cash := price.RoundTo(0)                              // 12.00
+cash, err := price.RoundTo(0)                         // 12.00
 ok, err := price.GreaterThan("10")                    // comparisons return (bool, error)
 ```
 
 - Mixing currencies returns `money.ErrCurrencyMismatch`; floats return `money.ErrInvalidOperand`; dividing by zero returns `money.ErrDivisionByZero`.
+- `PercentageOf`/`RatioOf` scales (0 to `money.MaxScale`, 100) and `RoundTo` decimals (-100 to 100) outside their bounds return `money.ErrInvalidOperand`.
 - `Allocate(ratios ...any)` keeps order; `AllocateMap` gives tied leftover cents to keys in ascending order.
 
 ### Format and serialize

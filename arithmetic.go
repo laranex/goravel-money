@@ -83,21 +83,31 @@ func (m Money) Absolute() Money {
 	return m
 }
 
+// MaxScale is the largest scale PercentageOf and RatioOf accept, and the
+// largest number of decimals (either sign) RoundTo accepts, so no call can
+// force a huge power-of-ten computation. Larger values return
+// ErrInvalidOperand. It matches laravel-money's Money::MAX_SCALE.
+const MaxScale = 100
+
 // RoundTo rounds to fewer decimals than the currency has and keeps
 // minor-unit storage: 12.34 USD RoundTo(0) is 12.00, 15 JPY RoundTo(-1) is
 // 20. Decimals at or above the currency's precision return m unchanged.
-func (m Money) RoundTo(decimals int, rounding ...Rounding) Money {
+// Decimals outside -MaxScale..MaxScale return ErrInvalidOperand.
+func (m Money) RoundTo(decimals int, rounding ...Rounding) (Money, error) {
+	if decimals < -MaxScale || decimals > MaxScale {
+		return Money{}, newError(ErrInvalidOperand, "the decimals must be between -%d and %d, %d given", MaxScale, MaxScale, decimals)
+	}
 	if decimals >= m.currency.minorUnits {
-		return m
+		return m, nil
 	}
 	mode, err := pick(rounding)
 	if err != nil {
-		mode = HalfUp
+		return Money{}, err
 	}
 	unit := pow10(m.currency.minorUnits - decimals)
 	rounded, _ := divide(m.big(), unit, mode) // unit is never zero
 
-	return m.with(rounded.Mul(rounded, unit))
+	return m.with(rounded.Mul(rounded, unit)), nil
 }
 
 // Percent returns percent percent of m: 7.5% of 200.00 is 15.00.
@@ -132,13 +142,15 @@ func (m Money) SubtractPercent(percent any, rounding ...Rounding) (Money, error)
 }
 
 // PercentageOf returns what percentage m is of total as a decimal string with
-// scale decimals: 25.00 PercentageOf(200.00, 2) is "12.50".
+// scale decimals: 25.00 PercentageOf(200.00, 2) is "12.50". The scale must
+// be between 0 and MaxScale.
 func (m Money) PercentageOf(total Money, scale int, rounding ...Rounding) (string, error) {
 	return m.quotientOf(total, new(big.Int).Mul(m.big(), bigHundred), scale, rounding)
 }
 
 // RatioOf returns m divided by other as a decimal string with scale decimals:
-// 50.00 RatioOf(200.00, 4) is "0.2500".
+// 50.00 RatioOf(200.00, 4) is "0.2500". The scale must be between 0 and
+// MaxScale.
 func (m Money) RatioOf(other Money, scale int, rounding ...Rounding) (string, error) {
 	return m.quotientOf(other, m.big(), scale, rounding)
 }
@@ -150,8 +162,8 @@ func (m Money) quotientOf(other Money, numerator *big.Int, scale int, rounding [
 	if other.IsZero() {
 		return "", divisionByZero()
 	}
-	if scale < 0 {
-		return "", newError(ErrInvalidOperand, "the scale must be zero or positive, %d given", scale)
+	if scale < 0 || scale > MaxScale {
+		return "", newError(ErrInvalidOperand, "the scale must be between 0 and %d, %d given", MaxScale, scale)
 	}
 	mode, err := pick(rounding)
 	if err != nil {

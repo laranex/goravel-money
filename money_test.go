@@ -63,20 +63,64 @@ func TestParseAcceptsCurrencyCodesInAnyCase(t *testing.T) {
 	assert.Equal(t, "JPY", of(t, "1", " jpy ").Currency().Code())
 }
 
-func TestParseStripsGroupingCommasAndSpaces(t *testing.T) {
+func TestParseAcceptsPlainDigitsAndConsistentGrouping(t *testing.T) {
 	tests := []struct{ input, minor string }{
+		{"1234567.89", "123456789"},
 		{"1,234.50", "123450"},
+		{"12,345", "1234500"},
+		{"123,456", "12345600"},
 		{"1,234,567.89", "123456789"},
+		{"1,234,567,890", "123456789000"},
 		{"12,34,567.00", "123456700"},
+		{"1,23,456", "12345600"},
+		{"1,23,45,678", "1234567800"},
+		{"99,99,99,999.99", "99999999999"},
 		{"1 234 567.01", "123456701"},
 		{"1\u00A0234.50", "123450"},
-		{"1\u202F234.50", "123450"},
+		{"12\u00A034\u00A0567", "123456700"},
+		{"1\u202F234\u202F567", "123456700"},
 		{"  99.99  ", "9999"},
 		{"+5", "500"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			assert.Equal(t, tt.minor, of(t, tt.input, "USD").Amount())
+		})
+	}
+}
+
+func TestParseRejectsMixedSeparatorsAndIrregularGroups(t *testing.T) {
+	tests := map[string]string{
+		"space then comma":                    "1 234,567",
+		"comma then space":                    "1,234 567",
+		"comma then no-break space":           "1,234\u00A0567",
+		"space then no-break space":           "1 234\u00A0567",
+		"no-break then narrow no-break space": "1\u00A0234\u202F567",
+		"irregular groups":                    "1,234,56,789",
+		"Indian then Western groups":          "12,34,567,890",
+		"Western then Indian groups":          "1,234,56,789.00",
+		"last group of two":                   "12,345,67",
+		"last group of four":                  "1,23,4567",
+		"first group of four":                 "1234,567",
+		"Indian first group of three":         "123,45,678",
+		"two-digit group":                     "1,23",
+		"group of four":                       "1,2345",
+		"double separator":                    "1,,234",
+		"leading separator":                   ",123",
+		"trailing separator":                  "1,234,",
+		"separator before decimals":           "1,234,.50",
+		"grouped decimals":                    "1,234.567,8",
+		"dot grouping":                        "1.234.567",
+		"dot grouping with comma decimals":    "1.234,50",
+		"apostrophe":                          "1'234",
+		"underscore":                          "1_234",
+		"fullwidth digits":                    "１,２３４",
+		"Myanmar digits":                      "၁,၂၃၄",
+	}
+	for name, input := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := Parse(input, MustCurrency("USD"))
+			assert.ErrorIs(t, err, ErrInvalidDecimal, input)
 		})
 	}
 }
@@ -172,7 +216,7 @@ func TestParseRejectsMalformedAmounts(t *testing.T) {
 			_, err := Parse(input, MustCurrency("USD"))
 			require.ErrorIs(t, err, ErrInvalidDecimal)
 			assert.ErrorIs(t, err, ErrMoney)
-			assert.EqualError(t, err, `money: cannot parse "`+input+`" as an amount; use digits with a dot as the decimal separator, e.g. "1234.50"; commas or spaces may only group thousands ("1,234.50")`)
+			assert.EqualError(t, err, `money: cannot parse "`+input+`" as an amount; use digits with a dot as the decimal separator, e.g. "1234.50"; commas or spaces may only group thousands, one separator used consistently ("1,234,567.50" or "12,34,567.50")`)
 		})
 	}
 }
