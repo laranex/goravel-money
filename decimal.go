@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // Exact decimal arithmetic on integers (math/big). Every value is an integer
@@ -27,8 +28,10 @@ type parsedDecimal struct {
 const groupSeparators = ", \u00A0\u202F"
 
 // parseDecimal parses a decimal string such as "1234.50", "-0.5", "+5" or
-// "1,234.50". Commas, spaces and non-breaking spaces are accepted as
-// thousands separators in the integer part only.
+// "1,234.50". The integer part may be grouped with one separator (comma,
+// space, no-break space or narrow no-break space) used consistently: Western
+// groups of three (1,234,567) or Indian grouping (12,34,567). The decimal
+// separator is always a dot.
 func parseDecimal(input string) (parsedDecimal, error) {
 	body := strings.Trim(input, " \t\n\r\x00\x0B")
 	negative := false
@@ -66,39 +69,44 @@ func parseDecimal(input string) (parsedDecimal, error) {
 	}, nil
 }
 
-// validGrouping matches ^\d{1,3}(?:[sep]\d{2,3})*[sep]\d{3}$, the grouping
-// laravel-money accepts (including Indian 12,34,567).
+// validGrouping reports whether integer is digits grouped by a single
+// separator used throughout: Western groups of three (1,234,567) or Indian
+// grouping (12,34,567: the last group has three digits, earlier groups two).
+// It accepts exactly what laravel-money accepts.
 func validGrouping(integer string) bool {
-	groups := strings.FieldsFunc(integer, func(r rune) bool { return strings.ContainsRune(groupSeparators, r) })
-	if len(groups) < 2 || countSeparators(integer) != len(groups)-1 {
+	sep := strings.IndexAny(integer, groupSeparators)
+	if sep < 0 {
 		return false
 	}
-	for i, group := range groups {
+	separator, _ := utf8.DecodeRuneInString(integer[sep:])
+	groups := strings.Split(integer, string(separator))
+	if len(groups) < 2 {
+		return false
+	}
+	for _, group := range groups {
 		if !isDigits(group) {
+			return false // empty, another separator or a non-digit
+		}
+	}
+
+	first, last, middle := len(groups[0]), len(groups[len(groups)-1]), groups[1:len(groups)-1]
+	if last != 3 || first > 3 {
+		return false
+	}
+	size := 3 // Western; Indian when the second group has two digits
+	if len(middle) > 0 && len(middle[0]) == 2 {
+		size = 2
+		if first > 2 {
 			return false
 		}
-		switch {
-		case i == 0 && (len(group) < 1 || len(group) > 3):
-			return false
-		case i == len(groups)-1 && len(group) != 3:
-			return false
-		case i > 0 && i < len(groups)-1 && (len(group) < 2 || len(group) > 3):
+	}
+	for _, group := range middle {
+		if len(group) != size {
 			return false
 		}
 	}
 
 	return true
-}
-
-func countSeparators(s string) int {
-	n := 0
-	for _, r := range s {
-		if strings.ContainsRune(groupSeparators, r) {
-			n++
-		}
-	}
-
-	return n
 }
 
 func isDigits(s string) bool {

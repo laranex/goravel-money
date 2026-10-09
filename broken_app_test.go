@@ -43,8 +43,10 @@ func TestMisconfiguredApp(t *testing.T) {
 	assert.ErrorContains(t, err, "invalid money config")
 
 	assert.Equal(t, "3.33", must(t)(m.DividedBy(3, HalfUp)).Decimal(), "an explicit rounding needs no config")
-	assert.Equal(t, "10.00", MustParse("9.995", usd, HalfUp).RoundTo(2).Decimal())
-	assert.Equal(t, "10.00", MustParse("9.50", usd).RoundTo(0).Decimal(), "RoundTo falls back to HalfUp")
+	assert.Equal(t, "10.00", must(t)(MustParse("9.995", usd, HalfUp).RoundTo(2)).Decimal())
+	assert.Equal(t, "10.00", must(t)(MustParse("9.50", usd).RoundTo(0, HalfUp)).Decimal(), "an explicit rounding needs no config")
+	_, err = MustParse("9.50", usd).RoundTo(0)
+	assert.ErrorContains(t, err, "invalid money config")
 	assert.Equal(t, "USD 10.00", m.Format(), "Format falls back to the plain format")
 }
 

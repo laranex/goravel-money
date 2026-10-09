@@ -2,7 +2,10 @@ package money
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -244,6 +247,15 @@ func TestPercentageOf(t *testing.T) {
 	assert.ErrorIs(t, err, ErrCurrencyMismatch)
 	_, err = of(t, "1", "").PercentageOf(of(t, "1", ""), -1)
 	assert.ErrorIs(t, err, ErrInvalidOperand)
+	assert.EqualError(t, err, "money: the scale must be between 0 and 100, -1 given")
+
+	got, err := of(t, "1", "").PercentageOf(of(t, "3", ""), MaxScale)
+	require.NoError(t, err)
+	assert.Equal(t, "33."+strings.Repeat("3", 100), got)
+	_, err = of(t, "1", "").PercentageOf(of(t, "3", ""), 101)
+	assert.EqualError(t, err, "money: the scale must be between 0 and 100, 101 given")
+	_, err = of(t, "1", "").PercentageOf(of(t, "3", ""), math.MaxInt)
+	assert.ErrorIs(t, err, ErrInvalidOperand)
 }
 
 func TestRatioOf(t *testing.T) {
@@ -269,6 +281,16 @@ func TestRatioOf(t *testing.T) {
 	assert.ErrorIs(t, err, ErrDivisionByZero)
 	_, err = of(t, "1", "").RatioOf(of(t, "1", "EUR"), 4)
 	assert.ErrorIs(t, err, ErrCurrencyMismatch)
+	_, err = of(t, "1", "").RatioOf(of(t, "3", ""), -2)
+	assert.EqualError(t, err, "money: the scale must be between 0 and 100, -2 given")
+
+	got, err := of(t, "1", "").RatioOf(of(t, "3", ""), MaxScale)
+	require.NoError(t, err)
+	assert.Equal(t, "0."+strings.Repeat("3", 100), got)
+	_, err = of(t, "1", "").RatioOf(of(t, "3", ""), 101)
+	assert.EqualError(t, err, "money: the scale must be between 0 and 100, 101 given")
+	_, err = of(t, "1", "").RatioOf(of(t, "3", ""), math.MaxInt)
+	assert.ErrorIs(t, err, ErrInvalidOperand)
 }
 
 func TestSplit(t *testing.T) {
@@ -389,8 +411,21 @@ func TestRoundTo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.amount, func(t *testing.T) {
-			assert.Equal(t, tt.want, of(t, tt.amount, tt.currency).RoundTo(tt.decimals, tt.rounding...).Decimal())
+			assert.Equal(t, tt.want, must(t)(of(t, tt.amount, tt.currency).RoundTo(tt.decimals, tt.rounding...)).Decimal())
 		})
+	}
+
+	assert.Equal(t, "12.34", must(t)(of(t, "12.34", "").RoundTo(MaxScale)).Decimal())
+	assert.Equal(t, "0.00", must(t)(of(t, "12.34", "").RoundTo(-MaxScale)).Decimal())
+	assert.Equal(t, "1"+strings.Repeat("0", 102), must(t)(of(t, "12.34", "").RoundTo(-MaxScale, Ceiling)).Amount())
+}
+
+func TestRoundToRejectsDecimalsBeyondMaxScale(t *testing.T) {
+	assert.Equal(t, 100, MaxScale)
+	for _, decimals := range []int{101, -101, math.MaxInt, math.MinInt} {
+		_, err := of(t, "12.34", "").RoundTo(decimals)
+		require.ErrorIs(t, err, ErrInvalidOperand)
+		assert.EqualError(t, err, fmt.Sprintf("money: the decimals must be between -100 and 100, %d given", decimals))
 	}
 }
 
@@ -454,7 +489,7 @@ func TestTheConfiguredDefaultRounding(t *testing.T) {
 
 	assert.Equal(t, "3.33", must(t)(of(t, "10", "").DividedBy(3)).Decimal())
 	assert.Equal(t, "6.66", must(t)(of(t, "20", "").DividedBy(3)).Decimal())
-	assert.Equal(t, "12.00", of(t, "12.99", "").RoundTo(0).Decimal())
+	assert.Equal(t, "12.00", must(t)(of(t, "12.99", "").RoundTo(0)).Decimal())
 
 	cfg.Rounding = Ceiling
 	useConfig(t, cfg)

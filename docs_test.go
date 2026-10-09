@@ -102,10 +102,10 @@ func TestDocumentationExamples(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "66.6667", percentage)
 
-	assert.Equal(t, "12.00", of(t, "12.34", "").RoundTo(0).Decimal())
-	assert.Equal(t, "12.00", of(t, "12.50", "").RoundTo(0, HalfEven).Decimal())
-	assert.Equal(t, "12.40", of(t, "12.34", "").RoundTo(1, Ceiling).Decimal())
-	assert.Equal(t, "20", of(t, "15", "JPY").RoundTo(-1).Decimal())
+	assert.Equal(t, "12.00", must(t)(of(t, "12.34", "").RoundTo(0)).Decimal())
+	assert.Equal(t, "12.00", must(t)(of(t, "12.50", "").RoundTo(0, HalfEven)).Decimal())
+	assert.Equal(t, "12.40", must(t)(of(t, "12.34", "").RoundTo(1, Ceiling)).Decimal())
+	assert.Equal(t, "20", must(t)(of(t, "15", "JPY").RoundTo(-1)).Decimal())
 
 	kwd, err := of(t, "1", "KWD").Split(6)
 	require.NoError(t, err)
