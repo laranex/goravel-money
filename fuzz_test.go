@@ -120,3 +120,78 @@ func TestDivideRoundsExactly(t *testing.T) {
 	_, err := divide(big.NewInt(1), big.NewInt(0), HalfUp)
 	assert.ErrorIs(t, err, ErrDivisionByZero)
 }
+
+// referenceRound rounds num/den to an integer from first principles with
+// math/big.Rat: floor and ceiling neighbors, then the mode's rule.
+func referenceRound(num, den int64, rounding Rounding) int64 {
+	exact := new(big.Rat).SetFrac64(num, den)
+	floor := new(big.Int).Div(exact.Num(), exact.Denom()) // Euclidean: floor for a positive denominator
+	if exact.IsInt() {
+		return floor.Int64()
+	}
+	lo, hi := floor.Int64(), floor.Int64()+1
+	diff := new(big.Rat).Sub(exact, new(big.Rat).SetInt64(lo)).Cmp(big.NewRat(1, 2))
+	towardZero, awayFromZero := lo, hi
+	if exact.Sign() < 0 {
+		towardZero, awayFromZero = hi, lo
+	}
+	even, odd := lo, hi
+	if lo%2 != 0 {
+		even, odd = hi, lo
+	}
+	switch rounding {
+	case Ceiling:
+		return hi
+	case Floor:
+		return lo
+	}
+	switch {
+	case diff < 0:
+		return lo
+	case diff > 0:
+		return hi
+	}
+	switch rounding {
+	case HalfDown:
+		return towardZero
+	case HalfEven:
+		return even
+	case HalfOdd:
+		return odd
+	case HalfPositiveInfinity:
+		return hi
+	case HalfNegativeInfinity:
+		return lo
+	default:
+		return awayFromZero
+	}
+}
+
+func TestDivideMatchesAReferenceForEveryMode(t *testing.T) {
+	for _, rounding := range Roundings() {
+		for num := int64(-60); num <= 60; num++ {
+			for den := int64(-12); den <= 12; den++ {
+				if den == 0 {
+					continue
+				}
+				got, err := divide(big.NewInt(num), big.NewInt(den), rounding)
+				require.NoError(t, err)
+				require.Equal(t, referenceRound(num, den, rounding), got.Int64(), "%d/%d %s", num, den, rounding)
+			}
+		}
+	}
+}
+
+func FuzzDivideMatchesTheReference(f *testing.F) {
+	f.Add(int64(7), int64(2), uint8(0))
+	f.Add(int64(math.MinInt64+1), int64(-3), uint8(2))
+	f.Fuzz(func(t *testing.T, num, den int64, mode uint8) {
+		if den == 0 || num == math.MinInt64 || den == math.MinInt64 {
+			return
+		}
+		rounding := Rounding(int(mode) % len(roundingNames))
+		got, err := divide(big.NewInt(num), big.NewInt(den), rounding)
+		require.NoError(t, err)
+		assert.Equal(t, referenceRound(num, den, rounding), got.Int64(), "%d/%d %s", num, den, rounding)
+	})
+}
