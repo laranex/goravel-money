@@ -243,11 +243,18 @@ func (a AmountColumn) Money(currency string) (m Money, ok bool, err error) {
 		return Money{}, false, err
 	}
 
-	return FromBigInt(mustBig(a.amount), c), true, nil
+	return FromBigInt(Money{amount: a.amount}.big(), c), true, nil
 }
 
 // Amount returns the stored minor units as an integer string, "" for NULL.
-func (a AmountColumn) Amount() string { return a.amount }
+// AmountColumn{Valid: true} built by hand holds zero.
+func (a AmountColumn) Amount() string {
+	if !a.Valid {
+		return ""
+	}
+
+	return Money{amount: a.amount}.Amount()
+}
 
 // Value implements driver.Valuer: NULL, or the amount in minor units.
 func (a AmountColumn) Value() (driver.Value, error) {
@@ -284,7 +291,7 @@ func (a AmountColumn) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	return json.Marshal(a.amount)
+	return json.Marshal(a.Amount())
 }
 
 // DecimalAmountColumn stores a decimal string ("12.50") in a DECIMAL column
