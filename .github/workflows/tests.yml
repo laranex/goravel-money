@@ -18,14 +18,18 @@ concurrency:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         go: ['1.25', '1.26', '1.27']
+        include:
+          - os: windows-latest
+            go: '1.27'
 
-    name: Go ${{ matrix.go }}
+    name: Go ${{ matrix.go }} (${{ matrix.os }})
 
     steps:
       - name: Checkout code
@@ -37,6 +41,7 @@ jobs:
           go-version: ${{ matrix.go }}
 
       - name: Format
+        shell: bash
         run: test -z "$(gofmt -l .)"
 
       - name: Vet
