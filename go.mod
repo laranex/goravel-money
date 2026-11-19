@@ -3,7 +3,7 @@ module github.com/laranex/goravel-money/v4
 go 1.25.0
 
 require (
-	github.com/goravel/framework v1.18.0
+	github.com/goravel/framework v1.18.1
 	github.com/ncruces/go-sqlite3 v0.25.2
 	github.com/ncruces/go-sqlite3/gormlite v0.24.0
 	github.com/stretchr/testify v1.12.1
@@ -34,11 +34,11 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/dave/dst v0.27.4 // indirect
-	github.com/dromara/carbon/v2 v2.6.11 // indirect
+	github.com/dromara/carbon/v2 v2.6.17 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
